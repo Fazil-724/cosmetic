@@ -534,6 +534,7 @@ class AppointmentController extends Controller
 
             $patients = Patient::whereIn('id', $request->patient_ids)
                 ->with('appointments', 'appointments.doctor')
+                ->where('patients.role_id',auth()->user()->roles->first()->id)
                 ->get();
 
             $followup_report_ids = config('constants.followup_report_ids', []);

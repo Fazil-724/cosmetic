@@ -31,7 +31,7 @@ class PatientController extends Controller
                 ->orWhere('name', 'LIKE', '%' . $request->q . '%');
         }
 
-        $patients = $patients
+        $patients = $patients->where('patients.role_id', auth()->user()->roles->first()->id)
             ->limit(10)
             ->get();
 
@@ -64,7 +64,7 @@ class PatientController extends Controller
             $patients = Patient::select(['patients.*', 'appointments.followup_date', 'appointments.start_time', 'appointments.status', 'appointments.followup_status', 'appointments.date'])
                 ->leftJoin('appointments', 'patients.id', '=', 'appointments.patient_id')
                 ->leftJoin('audits', 'patients.id', '=', 'audits.patient_id')
-                ->with(['appointments', 'audit'])->where('patients.role_id',auth()->user()->roles->first()->id);
+                ->with(['appointments', 'audit'])->where('patients.role_id', auth()->user()->roles->first()->id);
 
             if (Route::currentRouteName() == 'patients') {
                 $patients = $patients->where('approved', "1")
@@ -197,24 +197,18 @@ class PatientController extends Controller
 
                     if ($patient->remote_patent_status == 1) {
                         return '<span style="padding:2px 4px;border-radius:4px;background-color:#ebde7f91;color:#a38701">Away</span>';
-                    }else{
+                    } else {
                         return '<span style="padding:2px 4px;border-radius:4px;background-color:#c4f395;color:#48a357">Avalible</span>';
                     }
                 })
                 ->addColumn('appoint_type', function ($patient) {
-                        if($patient->appoint_type =='Procedure')
-                        {
-                            return '<span style="padding:2px 4px;border-radius:4px;background-color:#f395c6;color:#ffffff">Procedure</span>';
-                        }
-                        elseif($patient->appoint_type =='Consultation')
-                        {
-                            return '<span style="padding:2px 4px;border-radius:4px;background-color:#9d81d7;color:#ffffff">Consultation</span>';
-                        }
-                        else
-                        {
-                            return '';
-                        }
-
+                    if ($patient->appoint_type == 'Procedure') {
+                        return '<span style="padding:2px 4px;border-radius:4px;background-color:#f395c6;color:#ffffff">Procedure</span>';
+                    } elseif ($patient->appoint_type == 'Consultation') {
+                        return '<span style="padding:2px 4px;border-radius:4px;background-color:#9d81d7;color:#ffffff">Consultation</span>';
+                    } else {
+                        return '';
+                    }
                 })
 
                 ->addColumn('actions', function ($patient) {
@@ -279,7 +273,7 @@ class PatientController extends Controller
 
                     return $html;
                 })
-                ->rawColumns(['id', 'name', 'parents_name', 'appointment_time', 'fees', 'status', 'remote_patent_status','appoint_type','contact_details', 'actions'])
+                ->rawColumns(['id', 'name', 'parents_name', 'appointment_time', 'fees', 'status', 'remote_patent_status', 'appoint_type', 'contact_details', 'actions'])
                 ->filterColumn('id', function ($query, $keyword) {
                     $query
                         ->where('patients.id', 'LIKE', '%' . $keyword . '%');
@@ -296,9 +290,9 @@ class PatientController extends Controller
                 })
                 ->filterColumn('remote_patent_status', function ($query, $keyword) {
                     if (Route::currentRouteName() != 'followup-patients') {
-                        if($keyword == 'Away'){
+                        if ($keyword == 'Away') {
                             $query->where('appointments.remote_patent_status', '1');
-                        }else{
+                        } else {
                             $query->where('appointments.remote_patent_status', '0');
                         }
                     }
@@ -349,7 +343,7 @@ class PatientController extends Controller
         }
 
         // $patient_types = Helper::getPatientTypesForSelect();
-        $patient_types = PatientType::where('role_id',auth()->user()->roles->first()->id)->pluck('name', 'value')->toArray();
+        $patient_types = PatientType::where('role_id', auth()->user()->roles->first()->id)->pluck('name', 'value')->toArray();
         $AppointmentTypes = Helper::getAppointmentTypes();
         $branches = Helper::getCompanyBranchesForSelect(1);
 
@@ -358,7 +352,7 @@ class PatientController extends Controller
             'mode' => $mode,
             'patient' => $patient,
             'patient_types' => $patient_types,
-            'AppointmentTypes'=>$AppointmentTypes,
+            'AppointmentTypes' => $AppointmentTypes,
             'branches' => $branches
         ]);
     }
@@ -502,6 +496,7 @@ class PatientController extends Controller
     public function similar(Request $request)
     {
         $patients = Patient::where('id', '!=', $request->id)
+            ->where('patients.role_id', auth()->user()->roles->first()->id)
             ->where(function ($query) use ($request) {
                 if (!in_array($request->input('name'), [null, ''])) {
                     $query->orWhere('name', $request->input('name'));

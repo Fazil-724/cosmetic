@@ -13,6 +13,7 @@ class SummaryController extends Controller
     {
         $patients = Patient::select(['patients.*', 'appointments.followup_date', 'appointments.start_time', 'appointments.status', 'appointments.followup_status', 'appointments.date'])
             ->leftJoin('appointments', 'patients.id', '=', 'appointments.patient_id')
+            ->where('patients.role_id',auth()->user()->roles->first()->id)
             ->where('approved', "1")
             ->has('appointments', '>', 0)
             ->with('appointments');
